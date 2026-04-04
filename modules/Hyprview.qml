@@ -384,7 +384,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: Math.min(layoutRoot.width, 1360)
-                    implicitHeight: 240
+                    implicitHeight: 280
                     radius: 18
                     anchors.horizontalCenter: layoutRoot.horizontalCenter
                     color: "#73101420"
@@ -462,7 +462,7 @@ PanelWindow {
                                     extra: id === extraWorkspaceId
                                 })
                             }
-                            return result
+                            return result.slice(0, 6)
                         }
                     }
 
@@ -473,13 +473,13 @@ PanelWindow {
 
                         Grid {
                             id: workspaceGrid
-                            readonly property int maxColumns: 3
-                            readonly property int usedColumns: Math.max(1, Math.min(workspaceRepeater.count, maxColumns))
-                            property int cardWidth: Math.max(280, Math.min(430, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns)))
-                            property int cardHeight: 126
+                            readonly property int itemCount: Math.max(1, Math.min(workspaceRepeater.count, 6))
+                            readonly property int usedColumns: itemCount <= 3 ? itemCount : (itemCount === 4 ? 2 : 3)
+                            readonly property int rows: itemCount <= 3 ? 1 : 2
+                            property int cardWidth: Math.max(230, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns))
+                            property int cardHeight: Math.max(104, Math.floor((workspacePanel.height - ((rows - 1) * spacing)) / rows))
                             spacing: 12
                             columns: usedColumns
-                            readonly property int rows: Math.max(1, Math.ceil(Math.max(workspaceRepeater.count, 1) / usedColumns))
                             width: Math.min(workspacePanel.width, (usedColumns * cardWidth) + ((usedColumns - 1) * spacing))
                             height: Math.min(workspacePanel.height, (rows * cardHeight) + ((rows - 1) * spacing))
                             anchors.centerIn: parent
@@ -573,11 +573,11 @@ PanelWindow {
                                                             font.pixelSize: 11
                                                             font.bold: true
                                                             elide: Text.ElideRight
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
+                                }
+                            }
+                        }
+                    }
+                }
                                     }
 
                                     MouseArea {

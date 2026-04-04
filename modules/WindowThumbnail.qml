@@ -21,7 +21,7 @@ Item {
     property var clientInfo: {}
     property bool hovered: false
     property var exposeRoot: null
-    readonly property string windowAddress: hWin ? String(hWin.address) : ""
+    readonly property string windowAddress: hWin ? ("0x" + String(hWin.address)) : ""
     property bool dropHandled: false
 
     property real targetX: -1000

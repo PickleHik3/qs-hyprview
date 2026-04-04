@@ -384,7 +384,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: layoutRoot.width
-                    implicitHeight: 86
+                    implicitHeight: 170
                     radius: 18
                     color: "#66101010"
                     border.width: 1
@@ -392,28 +392,65 @@ PanelWindow {
 
                     ScriptModel {
                         id: workspaceModel
-                        property var allWorkspaces: Hyprland.workspaces ? Hyprland.workspaces.values : []
+                        property var rawToplevels: Hyprland.toplevels ? Hyprland.toplevels.values : []
 
                         values: {
-                            var workspaces = []
-                            if (!allWorkspaces) return []
-                            for (var w of allWorkspaces) {
-                                if (!w || w.id === undefined || w.id === null || w.id < 1) continue
-                                workspaces.push({
-                                    id: w.id,
-                                    name: String(w.name || w.id)
+                            if (!rawToplevels) return []
+
+                            var workspaceWindows = {}
+                            var occupiedIds = []
+                            var maxWorkspaceId = Math.max(1, root.activeWorkspaceId)
+
+                            for (var w of rawToplevels) {
+                                var clientInfo = w && w.lastIpcObject ? w.lastIpcObject : {}
+                                var workspace = clientInfo && clientInfo.workspace ? clientInfo.workspace : null
+                                var workspaceId = workspace && workspace.id !== undefined ? workspace.id : null
+                                if (workspaceId === null || workspaceId < 1) continue
+
+                                if (!workspaceWindows[workspaceId]) {
+                                    workspaceWindows[workspaceId] = []
+                                    occupiedIds.push(workspaceId)
+                                }
+
+                                workspaceWindows[workspaceId].push({
+                                    address: w.address,
+                                    title: String(w.title || clientInfo.title || ""),
+                                    clazz: String(clientInfo["class"] || clientInfo.initialClass || w.appId || "")
+                                })
+                                if (workspaceId > maxWorkspaceId) maxWorkspaceId = workspaceId
+                            }
+
+                            if (root.activeWorkspaceId > 0 && occupiedIds.indexOf(root.activeWorkspaceId) === -1) {
+                                occupiedIds.push(root.activeWorkspaceId)
+                            }
+
+                            occupiedIds.sort(function(a, b) { return a - b })
+                            var extraWorkspaceId = maxWorkspaceId + 1
+                            if (occupiedIds.indexOf(extraWorkspaceId) === -1) {
+                                occupiedIds.push(extraWorkspaceId)
+                            }
+
+                            var result = []
+                            for (var id of occupiedIds) {
+                                var wins = workspaceWindows[id] || []
+                                result.push({
+                                    id: id,
+                                    name: String(id),
+                                    windows: wins,
+                                    occupied: wins.length > 0,
+                                    extra: id === extraWorkspaceId
                                 })
                             }
-                            workspaces.sort(function(a, b) { return a.id - b.id })
-                            return workspaces
+                            return result
                         }
                     }
 
-                    Row {
-                        id: workspaceRow
+                    Grid {
+                        id: workspaceGrid
                         anchors.fill: parent
                         anchors.margins: 12
                         spacing: 10
+                        columns: Math.max(3, Math.min(6, Math.floor(width / 160)))
 
                         Repeater {
                             id: workspaceRepeater
@@ -423,20 +460,74 @@ PanelWindow {
                                 required property var modelData
                                 property int workspaceId: modelData.id
                                 property string workspaceName: modelData.name
+                                property var workspaceWindows: modelData.windows || []
+                                property bool isExtra: modelData.extra || false
 
-                                width: Math.max(72, (workspaceRow.width - (workspaceRow.spacing * Math.max(workspaceRepeater.count - 1, 0))) / Math.max(workspaceRepeater.count, 1))
-                                height: workspaceRow.height
+                                width: Math.max(128, (workspaceGrid.width - (workspaceGrid.spacing * Math.max(workspaceGrid.columns - 1, 0))) / Math.max(workspaceGrid.columns, 1))
+                                height: Math.max(72, (workspaceGrid.height - workspaceGrid.spacing) / 2)
                                 radius: 14
-                                color: root.activeWorkspaceId === workspaceId ? "#AA2A4365" : "#5524262a"
-                                border.width: 1
+                                color: root.activeWorkspaceId === workspaceId ? "#AA2A4365" : (isExtra ? "#44333a46" : "#5524262a")
+                                border.width: root.draggingTargetWorkspace === workspaceId ? 2 : 1
                                 border.color: root.draggingTargetWorkspace === workspaceId ? "#FF77B8FF" : "#557f8ea3"
 
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: workspaceName
-                                    color: "white"
-                                    font.pixelSize: 16
-                                    font.bold: root.activeWorkspaceId === workspaceId
+                                Column {
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    spacing: 6
+
+                                    Row {
+                                        width: parent.width
+                                        spacing: 8
+
+                                        Text {
+                                            text: "WS " + workspaceName
+                                            color: "white"
+                                            font.pixelSize: 14
+                                            font.bold: root.activeWorkspaceId === workspaceId
+                                        }
+
+                                        Text {
+                                            text: isExtra ? "+ new" : (workspaceWindows.length + " win")
+                                            color: "#b8d8ff"
+                                            font.pixelSize: 12
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: parent.width
+                                        height: parent.height - 28
+                                        radius: 10
+                                        color: "#33000000"
+                                        border.width: 1
+                                        border.color: "#33556677"
+
+                                        Grid {
+                                            anchors.fill: parent
+                                            anchors.margins: 6
+                                            columns: 2
+                                            spacing: 5
+
+                                            Repeater {
+                                                model: Math.min(workspaceWindows.length, 4)
+                                                delegate: Rectangle {
+                                                    required property int index
+                                                    width: (parent.width - parent.spacing) / 2
+                                                    height: (parent.height - parent.spacing) / 2
+                                                    radius: 6
+                                                    color: "#665a6f8a"
+                                                    border.width: 1
+                                                    border.color: "#77a2c5ef"
+
+                                                    Text {
+                                                        anchors.centerIn: parent
+                                                        text: workspaceWindows[index] ? String(workspaceWindows[index].clazz || workspaceWindows[index].title || "?").slice(0, 8) : ""
+                                                        color: "white"
+                                                        font.pixelSize: 10
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
 
                                 MouseArea {

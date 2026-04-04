@@ -242,6 +242,11 @@ Item {
                 }
             }
             onReleased: {
+                var targetWorkspace = (exposeRoot ? exposeRoot.draggingTargetWorkspace : -1)
+                var currentWorkspace = (hWin && hWin.workspace) ? hWin.workspace.id : -1
+                if (dragMoved && exposeRoot && targetWorkspace > 0 && targetWorkspace !== currentWorkspace && thumbContainer.windowAddress) {
+                    exposeRoot.moveWindowToWorkspace(thumbContainer.windowAddress, targetWorkspace)
+                }
                 Qt.callLater(function() {
                     thumbContainer.Drag.active = false
                     if (exposeRoot) {

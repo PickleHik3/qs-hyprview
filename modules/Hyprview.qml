@@ -142,7 +142,9 @@ PanelWindow {
 
     function moveWindowToWorkspace(address, workspaceId) {
         if (!address || workspaceId < 1) return
-        Hyprland.dispatch(`movetoworkspacesilent ${workspaceId},address:${address}`)
+        var addr = String(address).trim()
+        if (!addr.startsWith("0x")) addr = "0x" + addr
+        Hyprland.dispatch(`movetoworkspacesilent ${workspaceId},address:${addr}`)
         Qt.callLater(function() {
             Hyprland.refreshToplevels()
             Hyprland.refreshWorkspaces()

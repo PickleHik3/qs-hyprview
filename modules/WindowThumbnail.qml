@@ -217,6 +217,9 @@ Item {
                 var dx = event.x - startX
                 var dy = event.y - startY
                 if (Math.abs(dx) + Math.abs(dy) > 24) dragMoved = true
+                if (Math.abs(thumbContainer.x - thumbContainer.targetX) + Math.abs(thumbContainer.y - thumbContainer.targetY) > 20) {
+                    dragMoved = true
+                }
                 if (!swipeTriggered && dy < -90 && Math.abs(dx) < 140) {
                     swipeTriggered = true
                     thumbContainer.closeWindow()
@@ -244,7 +247,7 @@ Item {
             onReleased: {
                 var targetWorkspace = (exposeRoot ? exposeRoot.draggingTargetWorkspace : -1)
                 var currentWorkspace = (hWin && hWin.workspace) ? hWin.workspace.id : -1
-                if (dragMoved && exposeRoot && targetWorkspace > 0 && targetWorkspace !== currentWorkspace && thumbContainer.windowAddress) {
+                if (!swipeTriggered && exposeRoot && targetWorkspace > 0 && targetWorkspace !== currentWorkspace && thumbContainer.windowAddress) {
                     exposeRoot.moveWindowToWorkspace(thumbContainer.windowAddress, targetWorkspace)
                 }
                 Qt.callLater(function() {

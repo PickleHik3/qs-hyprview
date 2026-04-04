@@ -23,6 +23,9 @@ PanelWindow {
     property bool specialActive: false
     property bool animateWindows: false
     property var lastPositions: {}
+    property int activeWorkspaceId: 1
+    property int draggingTargetWorkspace: -1
+    property int draggingFromWorkspace: -1
 
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
@@ -72,6 +75,11 @@ PanelWindow {
                     var dataStr = String(ev.data)
                     var namePart = dataStr.split(",")[0]
                     root.specialActive = (namePart.length > 0)
+                    return
+                case "workspacev2":
+                    var wsData = String(ev.data).split(",")
+                    var wsId = parseInt(wsData[0], 10)
+                    if (!isNaN(wsId)) root.activeWorkspaceId = wsId
                     return
 
                 default:
@@ -130,6 +138,16 @@ PanelWindow {
                 it.refreshThumb()
             }
         }
+    }
+
+    function moveWindowToWorkspace(address, workspaceId) {
+        if (!address || workspaceId < 1) return
+        Hyprland.dispatch(`movetoworkspacesilent ${workspaceId},address:${address}`)
+        Qt.callLater(function() {
+            Hyprland.refreshToplevels()
+            Hyprland.refreshWorkspaces()
+            root.refreshThumbs()
+        })
     }
 
     // --- USER INTERFACE ---
@@ -251,7 +269,7 @@ PanelWindow {
                 Item {
                     id: exposeArea
                     width: layoutRoot.width
-                    height: layoutRoot.height - searchBox.implicitHeight - layoutRoot.spacing
+                    height: layoutRoot.height - searchBox.implicitHeight - workspaceStrip.implicitHeight - (layoutRoot.spacing * 2)
 
                     property int currentIndex: 0
                     property string searchText: ""
@@ -349,15 +367,100 @@ PanelWindow {
 
                             hovered: visible && (exposeArea.currentIndex === index)
                             moveCursorToActiveWindow: root.moveCursorToActiveWindow
+                            exposeRoot: root
                         }
                     }
                 }
 
                 SearchBox {
                     id: searchBox
+                    width: Math.min(layoutRoot.width * 0.72, 720)
                     onTextChanged: function(text) {
                         root.animateWindows = true
                         exposeArea.searchText = text
+                    }
+                }
+
+                Rectangle {
+                    id: workspaceStrip
+                    implicitWidth: layoutRoot.width
+                    implicitHeight: 86
+                    radius: 18
+                    color: "#66101010"
+                    border.width: 1
+                    border.color: "#33444444"
+
+                    ScriptModel {
+                        id: workspaceModel
+                        property var allWorkspaces: Hyprland.workspaces ? Hyprland.workspaces.values : []
+
+                        values: {
+                            var workspaces = []
+                            if (!allWorkspaces) return []
+                            for (var w of allWorkspaces) {
+                                if (!w || w.id === undefined || w.id === null || w.id < 1) continue
+                                workspaces.push({
+                                    id: w.id,
+                                    name: String(w.name || w.id)
+                                })
+                            }
+                            workspaces.sort(function(a, b) { return a.id - b.id })
+                            return workspaces
+                        }
+                    }
+
+                    Row {
+                        id: workspaceRow
+                        anchors.fill: parent
+                        anchors.margins: 12
+                        spacing: 10
+
+                        Repeater {
+                            id: workspaceRepeater
+                            model: workspaceModel
+
+                            delegate: Rectangle {
+                                required property var modelData
+                                property int workspaceId: modelData.id
+                                property string workspaceName: modelData.name
+
+                                width: Math.max(72, (workspaceRow.width - (workspaceRow.spacing * Math.max(workspaceRepeater.count - 1, 0))) / Math.max(workspaceRepeater.count, 1))
+                                height: workspaceRow.height
+                                radius: 14
+                                color: root.activeWorkspaceId === workspaceId ? "#AA2A4365" : "#5524262a"
+                                border.width: 1
+                                border.color: root.draggingTargetWorkspace === workspaceId ? "#FF77B8FF" : "#557f8ea3"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: workspaceName
+                                    color: "white"
+                                    font.pixelSize: 16
+                                    font.bold: root.activeWorkspaceId === workspaceId
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: Hyprland.dispatch(`workspace ${parent.workspaceId}`)
+                                }
+
+                                DropArea {
+                                    anchors.fill: parent
+                                    onEntered: root.draggingTargetWorkspace = parent.workspaceId
+                                    onExited: {
+                                        if (root.draggingTargetWorkspace === parent.workspaceId) {
+                                            root.draggingTargetWorkspace = -1
+                                        }
+                                    }
+                                    onDropped: {
+                                        var source = drag.source
+                                        if (!source || !source.windowAddress) return
+                                        root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
+                                        root.draggingTargetWorkspace = -1
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -20,6 +20,8 @@ Item {
 
     property var clientInfo: {}
     property bool hovered: false
+    property var exposeRoot: null
+    readonly property string windowAddress: hWin ? ("0x" + hWin.address) : ""
 
     property real targetX: -1000
     property real targetY: -1000
@@ -183,15 +185,46 @@ Item {
         }
 
         MouseArea {
+            id: dragArea
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             acceptedButtons: Qt.LeftButton | Qt.MiddleButton
+            drag.target: thumbContainer
+
+            property real startX: 0
+            property real startY: 0
+            property bool swipeTriggered: false
+            property bool dragMoved: false
 
             onEntered: {
                 exposeArea.currentIndex = index
             }
+            onPressed: event => {
+                startX = event.x
+                startY = event.y
+                swipeTriggered = false
+                dragMoved = false
+                if (exposeRoot) exposeRoot.draggingFromWorkspace = (hWin && hWin.workspace) ? hWin.workspace.id : -1
+                thumbContainer.Drag.active = true
+                thumbContainer.Drag.source = thumbContainer
+                thumbContainer.Drag.hotSpot.x = event.x
+                thumbContainer.Drag.hotSpot.y = event.y
+            }
+            onPositionChanged: event => {
+                var dx = event.x - startX
+                var dy = event.y - startY
+                if (Math.abs(dx) + Math.abs(dy) > 24) dragMoved = true
+                if (!swipeTriggered && dy < -90 && Math.abs(dx) < 140) {
+                    swipeTriggered = true
+                    thumbContainer.closeWindow()
+                }
+            }
             onClicked: event => {
+                if (swipeTriggered || dragMoved) {
+                    event.accepted = true
+                    return
+                }
                 exposeArea.currentIndex = index
 
                 if (event.button === Qt.LeftButton) {
@@ -205,6 +238,24 @@ Item {
                 if (exposeArea.currentIndex === index) {
                     exposeArea.currentIndex = -1
                 }
+            }
+            onReleased: {
+                thumbContainer.Drag.active = false
+                if (exposeRoot) {
+                    exposeRoot.draggingFromWorkspace = -1
+                    exposeRoot.draggingTargetWorkspace = -1
+                }
+                thumbContainer.x = thumbContainer.targetX
+                thumbContainer.y = thumbContainer.targetY
+            }
+            onCanceled: {
+                thumbContainer.Drag.active = false
+                if (exposeRoot) {
+                    exposeRoot.draggingFromWorkspace = -1
+                    exposeRoot.draggingTargetWorkspace = -1
+                }
+                thumbContainer.x = thumbContainer.targetX
+                thumbContainer.y = thumbContainer.targetY
             }
         }
 

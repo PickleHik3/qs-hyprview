@@ -432,12 +432,20 @@ PanelWindow {
                                     occupiedIds.push(workspaceId)
                                 }
 
+                                var atX = Number(clientInfo.at && clientInfo.at[0] !== undefined ? clientInfo.at[0] : 0)
+                                var atY = Number(clientInfo.at && clientInfo.at[1] !== undefined ? clientInfo.at[1] : 0)
+                                var sizeW = Math.max(1, Number(clientInfo.size && clientInfo.size[0] !== undefined ? clientInfo.size[0] : 1))
+                                var sizeH = Math.max(1, Number(clientInfo.size && clientInfo.size[1] !== undefined ? clientInfo.size[1] : 1))
+
                                 workspaceWindows[workspaceId].push({
                                     address: w.address,
                                     title: String(w.title || clientInfo.title || ""),
                                     clazz: String(clientInfo["class"] || clientInfo.initialClass || w.appId || ""),
                                     appName: friendlyAppName(clientInfo["class"] || clientInfo.initialClass || w.appId || "", w.title || clientInfo.title || ""),
-                                    area: Math.max(1, Number((clientInfo.size && clientInfo.size[0] ? clientInfo.size[0] : 1) * (clientInfo.size && clientInfo.size[1] ? clientInfo.size[1] : 1)))
+                                    atX: atX,
+                                    atY: atY,
+                                    sizeW: sizeW,
+                                    sizeH: sizeH
                                 })
                                 if (workspaceId > maxWorkspaceId) maxWorkspaceId = workspaceId
                             }
@@ -455,11 +463,42 @@ PanelWindow {
                             var result = []
                             for (var id of occupiedIds) {
                                 var wins = workspaceWindows[id] || []
-                                wins.sort(function(a, b) { return (b.area || 0) - (a.area || 0) })
+                                var layoutTiles = []
+
+                                if (wins.length > 0) {
+                                    var minX = wins[0].atX
+                                    var minY = wins[0].atY
+                                    var maxX = wins[0].atX + wins[0].sizeW
+                                    var maxY = wins[0].atY + wins[0].sizeH
+
+                                    for (var i = 1; i < wins.length; ++i) {
+                                        var win = wins[i]
+                                        minX = Math.min(minX, win.atX)
+                                        minY = Math.min(minY, win.atY)
+                                        maxX = Math.max(maxX, win.atX + win.sizeW)
+                                        maxY = Math.max(maxY, win.atY + win.sizeH)
+                                    }
+
+                                    var spanX = Math.max(1, maxX - minX)
+                                    var spanY = Math.max(1, maxY - minY)
+
+                                    for (var j = 0; j < Math.min(wins.length, 8); ++j) {
+                                        var iw = wins[j]
+                                        layoutTiles.push({
+                                            appName: iw.appName,
+                                            x: Math.max(0, Math.min(1, (iw.atX - minX) / spanX)),
+                                            y: Math.max(0, Math.min(1, (iw.atY - minY) / spanY)),
+                                            w: Math.max(0.1, Math.min(1, iw.sizeW / spanX)),
+                                            h: Math.max(0.1, Math.min(1, iw.sizeH / spanY))
+                                        })
+                                    }
+                                }
+
                                 result.push({
                                     id: id,
                                     name: String(id),
                                     windows: wins,
+                                    layoutTiles: layoutTiles,
                                     occupied: wins.length > 0,
                                     extra: id === extraWorkspaceId
                                 })
@@ -495,6 +534,7 @@ PanelWindow {
                                     property int workspaceId: modelData.id
                                     property string workspaceName: modelData.name
                                     property var workspaceWindows: modelData.windows || []
+                                    property var workspaceLayoutTiles: modelData.layoutTiles || []
                                     property bool isExtra: modelData.extra || false
 
                                     width: Math.max(128, (workspaceGrid.width - (workspaceGrid.spacing * Math.max(workspaceGrid.columns - 1, 0))) / Math.max(workspaceGrid.columns, 1))
@@ -535,51 +575,46 @@ PanelWindow {
                                             border.width: 1
                                             border.color: "#33556677"
 
-                                            Flow {
+                                            Item {
                                                 anchors.fill: parent
                                                 anchors.margins: 8
-                                                spacing: 8
-                                                flow: Flow.LeftToRight
-                                                readonly property int visibleCount: Math.min(workspaceWindows.length, 6)
-                                                property real minArea: {
-                                                    var m = 999999999
-                                                    for (var i = 0; i < visibleCount; ++i) m = Math.min(m, (workspaceWindows[i].area || 1))
-                                                    return m === 999999999 ? 1 : m
-                                                }
-                                                property real maxArea: {
-                                                    var m = 1
-                                                    for (var i = 0; i < visibleCount; ++i) m = Math.max(m, (workspaceWindows[i].area || 1))
-                                                    return m
-                                                }
+                                                clip: true
 
                                                 Repeater {
-                                                    model: Math.min(workspaceWindows.length, 6)
+                                                    model: workspaceLayoutTiles
 
                                                     delegate: Rectangle {
-                                                        required property int index
-                                                        readonly property var winData: workspaceWindows[index] || ({})
-                                                        readonly property real norm: parent.maxArea > parent.minArea ? (((winData.area || 1) - parent.minArea) / (parent.maxArea - parent.minArea)) : 0.5
-                                                        readonly property real tileBase: 34 + (norm * 22)
-                                                        width: Math.max(54, tileBase * 1.45)
-                                                        height: Math.max(34, tileBase)
+                                                        required property var modelData
+                                                        readonly property var tile: modelData || ({})
+                                                        x: Math.max(0, Math.round(tile.x * (parent.width - 4)))
+                                                        y: Math.max(0, Math.round(tile.y * (parent.height - 4)))
+                                                        width: Math.max(52, Math.round(tile.w * parent.width) - 4)
+                                                        height: Math.max(34, Math.round(tile.h * parent.height) - 4)
                                                         radius: 10
                                                         color: "#6E5E7A9A"
                                                         border.width: 1
                                                         border.color: "#77a2c5ef"
 
                                                         Text {
-                                                            anchors.horizontalCenter: parent.horizontalCenter
-                                                            anchors.verticalCenter: parent.verticalCenter
-                                                            text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 10)
+                                                            anchors.centerIn: parent
+                                                            text: String(tile.appName || "?").slice(0, 10)
                                                             color: "white"
                                                             font.pixelSize: 11
                                                             font.bold: true
                                                             elide: Text.ElideRight
-                                }
-                            }
-                        }
-                    }
-                }
+                                                        }
+                                                    }
+                                                }
+
+                                                Text {
+                                                    visible: workspaceLayoutTiles.length === 0
+                                                    anchors.centerIn: parent
+                                                    text: isExtra ? "Drop here to create" : "No windows"
+                                                    color: "#8fa8c8"
+                                                    font.pixelSize: 12
+                                                }
+                                            }
+                                        }
                                     }
 
                                     MouseArea {
@@ -595,15 +630,15 @@ PanelWindow {
                                                 root.draggingTargetWorkspace = -1
                                             }
                                         }
-                                    onDropped: {
-                                        var source = drag.source
-                                        if (!source || !source.windowAddress) return
-                                        source.dropHandled = true
-                                        root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
-                                        root.draggingTargetWorkspace = -1
+                                        onDropped: {
+                                            var source = drag.source
+                                            if (!source || !source.windowAddress) return
+                                            source.dropHandled = true
+                                            root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
+                                            root.draggingTargetWorkspace = -1
+                                        }
                                     }
                                 }
-                            }
                             }
                         }
                     }

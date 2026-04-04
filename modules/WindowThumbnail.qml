@@ -21,7 +21,8 @@ Item {
     property var clientInfo: {}
     property bool hovered: false
     property var exposeRoot: null
-    readonly property string windowAddress: hWin ? ("0x" + hWin.address) : ""
+    readonly property string windowAddress: hWin ? String(hWin.address) : ""
+    property bool dropHandled: false
 
     property real targetX: -1000
     property real targetY: -1000
@@ -205,6 +206,7 @@ Item {
                 startY = event.y
                 swipeTriggered = false
                 dragMoved = false
+                thumbContainer.dropHandled = false
                 if (exposeRoot) exposeRoot.draggingFromWorkspace = (hWin && hWin.workspace) ? hWin.workspace.id : -1
                 thumbContainer.Drag.active = true
                 thumbContainer.Drag.source = thumbContainer
@@ -240,13 +242,15 @@ Item {
                 }
             }
             onReleased: {
-                thumbContainer.Drag.active = false
-                if (exposeRoot) {
-                    exposeRoot.draggingFromWorkspace = -1
-                    exposeRoot.draggingTargetWorkspace = -1
-                }
-                thumbContainer.x = thumbContainer.targetX
-                thumbContainer.y = thumbContainer.targetY
+                Qt.callLater(function() {
+                    thumbContainer.Drag.active = false
+                    if (exposeRoot) {
+                        exposeRoot.draggingFromWorkspace = -1
+                        exposeRoot.draggingTargetWorkspace = -1
+                    }
+                    thumbContainer.x = thumbContainer.targetX
+                    thumbContainer.y = thumbContainer.targetY
+                })
             }
             onCanceled: {
                 thumbContainer.Drag.active = false

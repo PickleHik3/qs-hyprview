@@ -384,7 +384,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: Math.min(layoutRoot.width, 1360)
-                    implicitHeight: 210
+                    implicitHeight: 240
                     radius: 18
                     anchors.horizontalCenter: layoutRoot.horizontalCenter
                     color: "#73101420"
@@ -473,10 +473,10 @@ PanelWindow {
 
                         Grid {
                             id: workspaceGrid
-                            readonly property int maxColumns: 4
+                            readonly property int maxColumns: 3
                             readonly property int usedColumns: Math.max(1, Math.min(workspaceRepeater.count, maxColumns))
-                            property int cardWidth: Math.max(250, Math.min(340, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns)))
-                            property int cardHeight: 106
+                            property int cardWidth: Math.max(280, Math.min(430, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns)))
+                            property int cardHeight: 126
                             spacing: 12
                             columns: usedColumns
                             readonly property int rows: Math.max(1, Math.ceil(Math.max(workspaceRepeater.count, 1) / usedColumns))
@@ -504,8 +504,8 @@ PanelWindow {
 
                                     Column {
                                         anchors.fill: parent
-                                        anchors.margins: 10
-                                        spacing: 7
+                                        anchors.margins: 12
+                                        spacing: 8
 
                                         Row {
                                             width: parent.width
@@ -527,7 +527,7 @@ PanelWindow {
 
                                         Rectangle {
                                             width: parent.width
-                                            height: Math.max(58, parent.height - 32)
+                                            height: Math.max(74, parent.height - 34)
                                             radius: 10
                                             color: "#33000000"
                                             border.width: 1
@@ -535,8 +535,8 @@ PanelWindow {
 
                                             Flow {
                                                 anchors.fill: parent
-                                                anchors.margins: 6
-                                                spacing: 6
+                                                anchors.margins: 8
+                                                spacing: 8
                                                 flow: Flow.LeftToRight
                                                 readonly property int visibleCount: Math.min(workspaceWindows.length, 6)
                                                 property real minArea: {
@@ -557,10 +557,10 @@ PanelWindow {
                                                         required property int index
                                                         readonly property var winData: workspaceWindows[index] || ({})
                                                         readonly property real norm: parent.maxArea > parent.minArea ? (((winData.area || 1) - parent.minArea) / (parent.maxArea - parent.minArea)) : 0.5
-                                                        readonly property real tileBase: 28 + (norm * 18)
-                                                        width: Math.max(38, tileBase * 1.55)
-                                                        height: Math.max(28, tileBase)
-                                                        radius: 8
+                                                        readonly property real tileBase: 34 + (norm * 22)
+                                                        width: Math.max(54, tileBase * 1.45)
+                                                        height: Math.max(34, tileBase)
+                                                        radius: 10
                                                         color: "#6E5E7A9A"
                                                         border.width: 1
                                                         border.color: "#77a2c5ef"
@@ -568,9 +568,9 @@ PanelWindow {
                                                         Text {
                                                             anchors.horizontalCenter: parent.horizontalCenter
                                                             anchors.verticalCenter: parent.verticalCenter
-                                                            text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 8)
+                                                            text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 10)
                                                             color: "white"
-                                                            font.pixelSize: 10
+                                                            font.pixelSize: 11
                                                             font.bold: true
                                                             elide: Text.ElideRight
                                                         }
@@ -593,14 +593,15 @@ PanelWindow {
                                                 root.draggingTargetWorkspace = -1
                                             }
                                         }
-                                        onDropped: {
-                                            var source = drag.source
-                                            if (!source || !source.windowAddress) return
-                                            root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
-                                            root.draggingTargetWorkspace = -1
-                                        }
+                                    onDropped: {
+                                        var source = drag.source
+                                        if (!source || !source.windowAddress) return
+                                        source.dropHandled = true
+                                        root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
+                                        root.draggingTargetWorkspace = -1
                                     }
                                 }
+                            }
                             }
                         }
                     }

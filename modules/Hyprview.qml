@@ -397,6 +397,23 @@ PanelWindow {
                         values: {
                             if (!rawToplevels) return []
 
+                            function friendlyAppName(rawClass, rawTitle) {
+                                var cls = String(rawClass || "").trim()
+                                if (cls.length > 0) {
+                                    cls = cls.split(".").pop()
+                                    cls = cls.split("-").pop()
+                                    cls = cls.replace(/[_-]+/g, " ")
+                                    if (cls.length > 0) {
+                                        return cls.charAt(0).toUpperCase() + cls.slice(1)
+                                    }
+                                }
+                                var title = String(rawTitle || "").trim()
+                                if (title.length > 0) {
+                                    return title.split(" - ")[0].slice(0, 18)
+                                }
+                                return "App"
+                            }
+
                             var workspaceWindows = {}
                             var occupiedIds = []
                             var maxWorkspaceId = Math.max(1, root.activeWorkspaceId)
@@ -416,6 +433,7 @@ PanelWindow {
                                     address: w.address,
                                     title: String(w.title || clientInfo.title || ""),
                                     clazz: String(clientInfo["class"] || clientInfo.initialClass || w.appId || ""),
+                                    appName: friendlyAppName(clientInfo["class"] || clientInfo.initialClass || w.appId || "", w.title || clientInfo.title || ""),
                                     area: Math.max(1, Number((clientInfo.size && clientInfo.size[0] ? clientInfo.size[0] : 1) * (clientInfo.size && clientInfo.size[1] ? clientInfo.size[1] : 1)))
                                 })
                                 if (workspaceId > maxWorkspaceId) maxWorkspaceId = workspaceId
@@ -491,9 +509,9 @@ PanelWindow {
                                             spacing: 8
 
                                             Text {
-                                                text: "WS " + workspaceName
+                                                text: "Workspace " + workspaceName
                                                 color: "white"
-                                                font.pixelSize: 14
+                                                font.pixelSize: 13
                                                 font.bold: root.activeWorkspaceId === workspaceId
                                             }
 
@@ -541,10 +559,11 @@ PanelWindow {
 
                                                         Text {
                                                             anchors.centerIn: parent
-                                                            text: String(winData.clazz || winData.title || "?").slice(0, 3).toUpperCase()
+                                                            text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 10)
                                                             color: "white"
-                                                            font.pixelSize: 10
+                                                            font.pixelSize: 9
                                                             font.bold: true
+                                                            elide: Text.ElideRight
                                                         }
                                                     }
                                                 }

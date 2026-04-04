@@ -384,7 +384,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: layoutRoot.width
-                    implicitHeight: 170
+                    implicitHeight: 250
                     radius: 18
                     color: "#66101010"
                     border.width: 1
@@ -472,12 +472,14 @@ PanelWindow {
 
                         Grid {
                             id: workspaceGrid
-                            property int cardWidth: 180
-                            property int cardHeight: 64
+                            readonly property int maxColumns: 4
+                            readonly property int usedColumns: Math.max(1, Math.min(workspaceRepeater.count, maxColumns))
+                            property int cardWidth: Math.max(240, Math.min(360, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns)))
+                            property int cardHeight: 118
                             spacing: 10
-                            columns: Math.max(1, Math.min(workspaceRepeater.count, Math.floor((workspacePanel.width + spacing) / (cardWidth + spacing))))
-                            readonly property int rows: Math.max(1, Math.ceil(Math.max(workspaceRepeater.count, 1) / Math.max(columns, 1)))
-                            width: Math.min(workspacePanel.width, (Math.min(columns, Math.max(workspaceRepeater.count, 1)) * cardWidth) + ((Math.min(columns, Math.max(workspaceRepeater.count, 1)) - 1) * spacing))
+                            columns: usedColumns
+                            readonly property int rows: Math.max(1, Math.ceil(Math.max(workspaceRepeater.count, 1) / usedColumns))
+                            width: Math.min(workspacePanel.width, (usedColumns * cardWidth) + ((usedColumns - 1) * spacing))
                             height: Math.min(workspacePanel.height, (rows * cardHeight) + ((rows - 1) * spacing))
                             anchors.centerIn: parent
 
@@ -511,20 +513,20 @@ PanelWindow {
                                             Text {
                                                 text: "Workspace " + workspaceName
                                                 color: "white"
-                                                font.pixelSize: 13
+                                                font.pixelSize: 14
                                                 font.bold: root.activeWorkspaceId === workspaceId
                                             }
 
                                             Text {
                                                 text: isExtra ? "+ new" : (workspaceWindows.length + " win")
                                                 color: "#b8d8ff"
-                                                font.pixelSize: 12
+                                                font.pixelSize: 13
                                             }
                                         }
 
                                         Rectangle {
                                             width: parent.width
-                                            height: parent.height - 28
+                                            height: Math.max(62, parent.height - 30)
                                             radius: 10
                                             color: "#33000000"
                                             border.width: 1
@@ -550,18 +552,19 @@ PanelWindow {
                                                         required property int index
                                                         readonly property var winData: workspaceWindows[index] || ({})
                                                         readonly property real ratio: (winData.area || 1) / parent.totalArea
-                                                        width: Math.max(20, (parent.width - (parent.spacing * Math.max(parent.visibleCount - 1, 0))) * ratio)
+                                                        width: Math.max(36, (parent.width - (parent.spacing * Math.max(parent.visibleCount - 1, 0))) * ratio)
                                                         height: parent.height
-                                                        radius: 6
-                                                        color: "#665a6f8a"
+                                                        radius: 8
+                                                        color: "#6E5E7A9A"
                                                         border.width: 1
                                                         border.color: "#77a2c5ef"
 
                                                         Text {
-                                                            anchors.centerIn: parent
+                                                            anchors.horizontalCenter: parent.horizontalCenter
+                                                            anchors.verticalCenter: parent.verticalCenter
                                                             text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 10)
                                                             color: "white"
-                                                            font.pixelSize: 9
+                                                            font.pixelSize: 11
                                                             font.bold: true
                                                             elide: Text.ElideRight
                                                         }

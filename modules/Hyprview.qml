@@ -383,12 +383,13 @@ PanelWindow {
 
                 Rectangle {
                     id: workspaceStrip
-                    implicitWidth: layoutRoot.width
-                    implicitHeight: 250
+                    implicitWidth: Math.min(layoutRoot.width, 1360)
+                    implicitHeight: 210
                     radius: 18
-                    color: "#66101010"
+                    anchors.horizontalCenter: layoutRoot.horizontalCenter
+                    color: "#73101420"
                     border.width: 1
-                    border.color: "#33444444"
+                    border.color: "#335b6780"
 
                     ScriptModel {
                         id: workspaceModel
@@ -474,9 +475,9 @@ PanelWindow {
                             id: workspaceGrid
                             readonly property int maxColumns: 4
                             readonly property int usedColumns: Math.max(1, Math.min(workspaceRepeater.count, maxColumns))
-                            property int cardWidth: Math.max(240, Math.min(360, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns)))
-                            property int cardHeight: 118
-                            spacing: 10
+                            property int cardWidth: Math.max(250, Math.min(340, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns)))
+                            property int cardHeight: 106
+                            spacing: 12
                             columns: usedColumns
                             readonly property int rows: Math.max(1, Math.ceil(Math.max(workspaceRepeater.count, 1) / usedColumns))
                             width: Math.min(workspacePanel.width, (usedColumns * cardWidth) + ((usedColumns - 1) * spacing))
@@ -504,7 +505,7 @@ PanelWindow {
                                     Column {
                                         anchors.fill: parent
                                         anchors.margins: 10
-                                        spacing: 6
+                                        spacing: 7
 
                                         Row {
                                             width: parent.width
@@ -526,34 +527,39 @@ PanelWindow {
 
                                         Rectangle {
                                             width: parent.width
-                                            height: Math.max(62, parent.height - 30)
+                                            height: Math.max(58, parent.height - 32)
                                             radius: 10
                                             color: "#33000000"
                                             border.width: 1
                                             border.color: "#33556677"
 
-                                            Row {
+                                            Flow {
                                                 anchors.fill: parent
                                                 anchors.margins: 6
-                                                spacing: 4
-                                                readonly property int visibleCount: Math.min(workspaceWindows.length, 5)
-                                                property real totalArea: {
-                                                    var total = 0
-                                                    for (var i = 0; i < visibleCount; ++i) {
-                                                        total += (workspaceWindows[i].area || 1)
-                                                    }
-                                                    return Math.max(1, total)
+                                                spacing: 6
+                                                flow: Flow.LeftToRight
+                                                readonly property int visibleCount: Math.min(workspaceWindows.length, 6)
+                                                property real minArea: {
+                                                    var m = 999999999
+                                                    for (var i = 0; i < visibleCount; ++i) m = Math.min(m, (workspaceWindows[i].area || 1))
+                                                    return m === 999999999 ? 1 : m
+                                                }
+                                                property real maxArea: {
+                                                    var m = 1
+                                                    for (var i = 0; i < visibleCount; ++i) m = Math.max(m, (workspaceWindows[i].area || 1))
+                                                    return m
                                                 }
 
                                                 Repeater {
-                                                    model: Math.min(workspaceWindows.length, 5)
+                                                    model: Math.min(workspaceWindows.length, 6)
 
                                                     delegate: Rectangle {
                                                         required property int index
                                                         readonly property var winData: workspaceWindows[index] || ({})
-                                                        readonly property real ratio: (winData.area || 1) / parent.totalArea
-                                                        width: Math.max(36, (parent.width - (parent.spacing * Math.max(parent.visibleCount - 1, 0))) * ratio)
-                                                        height: parent.height
+                                                        readonly property real norm: parent.maxArea > parent.minArea ? (((winData.area || 1) - parent.minArea) / (parent.maxArea - parent.minArea)) : 0.5
+                                                        readonly property real tileBase: 28 + (norm * 18)
+                                                        width: Math.max(38, tileBase * 1.55)
+                                                        height: Math.max(28, tileBase)
                                                         radius: 8
                                                         color: "#6E5E7A9A"
                                                         border.width: 1
@@ -562,9 +568,9 @@ PanelWindow {
                                                         Text {
                                                             anchors.horizontalCenter: parent.horizontalCenter
                                                             anchors.verticalCenter: parent.verticalCenter
-                                                            text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 10)
+                                                            text: String(winData.appName || winData.clazz || winData.title || "?").slice(0, 8)
                                                             color: "white"
-                                                            font.pixelSize: 11
+                                                            font.pixelSize: 10
                                                             font.bold: true
                                                             elide: Text.ElideRight
                                                         }

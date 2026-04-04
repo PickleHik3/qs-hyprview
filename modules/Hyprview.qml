@@ -415,7 +415,8 @@ PanelWindow {
                                 workspaceWindows[workspaceId].push({
                                     address: w.address,
                                     title: String(w.title || clientInfo.title || ""),
-                                    clazz: String(clientInfo["class"] || clientInfo.initialClass || w.appId || "")
+                                    clazz: String(clientInfo["class"] || clientInfo.initialClass || w.appId || ""),
+                                    area: Math.max(1, Number((clientInfo.size && clientInfo.size[0] ? clientInfo.size[0] : 1) * (clientInfo.size && clientInfo.size[1] ? clientInfo.size[1] : 1)))
                                 })
                                 if (workspaceId > maxWorkspaceId) maxWorkspaceId = workspaceId
                             }
@@ -433,6 +434,7 @@ PanelWindow {
                             var result = []
                             for (var id of occupiedIds) {
                                 var wins = workspaceWindows[id] || []
+                                wins.sort(function(a, b) { return (b.area || 0) - (a.area || 0) })
                                 result.push({
                                     id: id,
                                     name: String(id),
@@ -445,109 +447,130 @@ PanelWindow {
                         }
                     }
 
-                    Grid {
-                        id: workspaceGrid
+                    Item {
+                        id: workspacePanel
                         anchors.fill: parent
                         anchors.margins: 12
-                        spacing: 10
-                        columns: Math.max(3, Math.min(6, Math.floor(width / 160)))
 
-                        Repeater {
-                            id: workspaceRepeater
-                            model: workspaceModel
+                        Grid {
+                            id: workspaceGrid
+                            property int cardWidth: 180
+                            property int cardHeight: 64
+                            spacing: 10
+                            columns: Math.max(1, Math.min(workspaceRepeater.count, Math.floor((workspacePanel.width + spacing) / (cardWidth + spacing))))
+                            readonly property int rows: Math.max(1, Math.ceil(Math.max(workspaceRepeater.count, 1) / Math.max(columns, 1)))
+                            width: Math.min(workspacePanel.width, (Math.min(columns, Math.max(workspaceRepeater.count, 1)) * cardWidth) + ((Math.min(columns, Math.max(workspaceRepeater.count, 1)) - 1) * spacing))
+                            height: Math.min(workspacePanel.height, (rows * cardHeight) + ((rows - 1) * spacing))
+                            anchors.centerIn: parent
 
-                            delegate: Rectangle {
-                                required property var modelData
-                                property int workspaceId: modelData.id
-                                property string workspaceName: modelData.name
-                                property var workspaceWindows: modelData.windows || []
-                                property bool isExtra: modelData.extra || false
+                            Repeater {
+                                id: workspaceRepeater
+                                model: workspaceModel
 
-                                width: Math.max(128, (workspaceGrid.width - (workspaceGrid.spacing * Math.max(workspaceGrid.columns - 1, 0))) / Math.max(workspaceGrid.columns, 1))
-                                height: Math.max(72, (workspaceGrid.height - workspaceGrid.spacing) / 2)
-                                radius: 14
-                                color: root.activeWorkspaceId === workspaceId ? "#AA2A4365" : (isExtra ? "#44333a46" : "#5524262a")
-                                border.width: root.draggingTargetWorkspace === workspaceId ? 2 : 1
-                                border.color: root.draggingTargetWorkspace === workspaceId ? "#FF77B8FF" : "#557f8ea3"
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    property int workspaceId: modelData.id
+                                    property string workspaceName: modelData.name
+                                    property var workspaceWindows: modelData.windows || []
+                                    property bool isExtra: modelData.extra || false
 
-                                Column {
-                                    anchors.fill: parent
-                                    anchors.margins: 10
-                                    spacing: 6
+                                    width: Math.max(128, (workspaceGrid.width - (workspaceGrid.spacing * Math.max(workspaceGrid.columns - 1, 0))) / Math.max(workspaceGrid.columns, 1))
+                                    height: workspaceGrid.cardHeight
+                                    radius: 14
+                                    color: root.activeWorkspaceId === workspaceId ? "#AA2A4365" : (isExtra ? "#44333a46" : "#5524262a")
+                                    border.width: root.draggingTargetWorkspace === workspaceId ? 2 : 1
+                                    border.color: root.draggingTargetWorkspace === workspaceId ? "#FF77B8FF" : "#557f8ea3"
 
-                                    Row {
-                                        width: parent.width
-                                        spacing: 8
+                                    Column {
+                                        anchors.fill: parent
+                                        anchors.margins: 10
+                                        spacing: 6
 
-                                        Text {
-                                            text: "WS " + workspaceName
-                                            color: "white"
-                                            font.pixelSize: 14
-                                            font.bold: root.activeWorkspaceId === workspaceId
+                                        Row {
+                                            width: parent.width
+                                            spacing: 8
+
+                                            Text {
+                                                text: "WS " + workspaceName
+                                                color: "white"
+                                                font.pixelSize: 14
+                                                font.bold: root.activeWorkspaceId === workspaceId
+                                            }
+
+                                            Text {
+                                                text: isExtra ? "+ new" : (workspaceWindows.length + " win")
+                                                color: "#b8d8ff"
+                                                font.pixelSize: 12
+                                            }
                                         }
 
-                                        Text {
-                                            text: isExtra ? "+ new" : (workspaceWindows.length + " win")
-                                            color: "#b8d8ff"
-                                            font.pixelSize: 12
-                                        }
-                                    }
+                                        Rectangle {
+                                            width: parent.width
+                                            height: parent.height - 28
+                                            radius: 10
+                                            color: "#33000000"
+                                            border.width: 1
+                                            border.color: "#33556677"
 
-                                    Rectangle {
-                                        width: parent.width
-                                        height: parent.height - 28
-                                        radius: 10
-                                        color: "#33000000"
-                                        border.width: 1
-                                        border.color: "#33556677"
+                                            Row {
+                                                anchors.fill: parent
+                                                anchors.margins: 6
+                                                spacing: 4
+                                                readonly property int visibleCount: Math.min(workspaceWindows.length, 5)
+                                                property real totalArea: {
+                                                    var total = 0
+                                                    for (var i = 0; i < visibleCount; ++i) {
+                                                        total += (workspaceWindows[i].area || 1)
+                                                    }
+                                                    return Math.max(1, total)
+                                                }
 
-                                        Grid {
-                                            anchors.fill: parent
-                                            anchors.margins: 6
-                                            columns: 2
-                                            spacing: 5
+                                                Repeater {
+                                                    model: Math.min(workspaceWindows.length, 5)
 
-                                            Repeater {
-                                                model: Math.min(workspaceWindows.length, 4)
-                                                delegate: Rectangle {
-                                                    required property int index
-                                                    width: (parent.width - parent.spacing) / 2
-                                                    height: (parent.height - parent.spacing) / 2
-                                                    radius: 6
-                                                    color: "#665a6f8a"
-                                                    border.width: 1
-                                                    border.color: "#77a2c5ef"
+                                                    delegate: Rectangle {
+                                                        required property int index
+                                                        readonly property var winData: workspaceWindows[index] || ({})
+                                                        readonly property real ratio: (winData.area || 1) / parent.totalArea
+                                                        width: Math.max(20, (parent.width - (parent.spacing * Math.max(parent.visibleCount - 1, 0))) * ratio)
+                                                        height: parent.height
+                                                        radius: 6
+                                                        color: "#665a6f8a"
+                                                        border.width: 1
+                                                        border.color: "#77a2c5ef"
 
-                                                    Text {
-                                                        anchors.centerIn: parent
-                                                        text: workspaceWindows[index] ? String(workspaceWindows[index].clazz || workspaceWindows[index].title || "?").slice(0, 8) : ""
-                                                        color: "white"
-                                                        font.pixelSize: 10
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: String(winData.clazz || winData.title || "?").slice(0, 3).toUpperCase()
+                                                            color: "white"
+                                                            font.pixelSize: 10
+                                                            font.bold: true
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: Hyprland.dispatch(`workspace ${parent.workspaceId}`)
-                                }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        onClicked: Hyprland.dispatch(`workspace ${parent.workspaceId}`)
+                                    }
 
-                                DropArea {
-                                    anchors.fill: parent
-                                    onEntered: root.draggingTargetWorkspace = parent.workspaceId
-                                    onExited: {
-                                        if (root.draggingTargetWorkspace === parent.workspaceId) {
+                                    DropArea {
+                                        anchors.fill: parent
+                                        onEntered: root.draggingTargetWorkspace = parent.workspaceId
+                                        onExited: {
+                                            if (root.draggingTargetWorkspace === parent.workspaceId) {
+                                                root.draggingTargetWorkspace = -1
+                                            }
+                                        }
+                                        onDropped: {
+                                            var source = drag.source
+                                            if (!source || !source.windowAddress) return
+                                            root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
                                             root.draggingTargetWorkspace = -1
                                         }
-                                    }
-                                    onDropped: {
-                                        var source = drag.source
-                                        if (!source || !source.windowAddress) return
-                                        root.moveWindowToWorkspace(source.windowAddress, parent.workspaceId)
-                                        root.draggingTargetWorkspace = -1
                                     }
                                 }
                             }

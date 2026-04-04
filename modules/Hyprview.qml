@@ -259,11 +259,20 @@ PanelWindow {
             anchors.fill: parent
             anchors.margins: 32
 
-            Column {
-                id: layoutRoot
-                anchors.fill: parent
-                anchors.margins: 48
-                spacing: 20
+                Column {
+                    id: layoutRoot
+                    anchors.fill: parent
+                    anchors.margins: 48
+                    spacing: 20
+
+                SearchBox {
+                    id: searchBox
+                    width: Math.min(layoutRoot.width * 0.72, 720)
+                    onTextChanged: function(text) {
+                        root.animateWindows = true
+                        exposeArea.searchText = text
+                    }
+                }
 
                 // thumbs area
                 Item {
@@ -369,15 +378,6 @@ PanelWindow {
                             moveCursorToActiveWindow: root.moveCursorToActiveWindow
                             exposeRoot: root
                         }
-                    }
-                }
-
-                SearchBox {
-                    id: searchBox
-                    width: Math.min(layoutRoot.width * 0.72, 720)
-                    onTextChanged: function(text) {
-                        root.animateWindows = true
-                        exposeArea.searchText = text
                     }
                 }
 

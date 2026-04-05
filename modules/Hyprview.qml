@@ -386,7 +386,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: Math.min(layoutRoot.width, 1360)
-                    implicitHeight: 280
+                    implicitHeight: 200
                     radius: 18
                     anchors.horizontalCenter: layoutRoot.horizontalCenter
                     color: "#73101420"
@@ -518,7 +518,7 @@ PanelWindow {
                             readonly property int usedColumns: itemCount <= 3 ? itemCount : (itemCount === 4 ? 2 : 3)
                             readonly property int rows: itemCount <= 3 ? 1 : 2
                             property int cardWidth: Math.max(230, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns))
-                            property int cardHeight: Math.max(104, Math.floor((workspacePanel.height - ((rows - 1) * spacing)) / rows))
+                            property int cardHeight: Math.max(88, Math.floor((workspacePanel.height - ((rows - 1) * spacing)) / rows))
                             spacing: 12
                             columns: usedColumns
                             width: Math.min(workspacePanel.width, (usedColumns * cardWidth) + ((usedColumns - 1) * spacing))

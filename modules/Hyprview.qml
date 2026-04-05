@@ -242,20 +242,20 @@ PanelWindow {
         Item {
             id: layoutContainer
             anchors.fill: parent
-            anchors.margins: 18
+            anchors.margins: 12
 
                 Column {
                     id: layoutRoot
                     anchors.fill: parent
                     anchors.leftMargin: 28
                     anchors.rightMargin: 28
-                    anchors.topMargin: 6
-                    anchors.bottomMargin: 16
-                    spacing: 16
+                    anchors.topMargin: 0
+                    anchors.bottomMargin: 12
+                    spacing: 12
 
                 SearchBox {
                     id: searchBox
-                    width: Math.min(layoutRoot.width * 0.72, 720)
+                    width: Math.min(layoutRoot.width * 0.68, 760)
                     onTextChanged: function(text) {
                         root.animateWindows = true
                         exposeArea.searchText = text
@@ -372,7 +372,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: Math.min(layoutRoot.width, 1360)
-                    implicitHeight: 170
+                    implicitHeight: 152
                     radius: 18
                     anchors.horizontalCenter: layoutRoot.horizontalCenter
                     color: "#73101420"
@@ -496,7 +496,7 @@ PanelWindow {
                     Item {
                         id: workspacePanel
                         anchors.fill: parent
-                        anchors.margins: 12
+                        anchors.margins: 10
 
                         Grid {
                             id: workspaceGrid
@@ -504,8 +504,8 @@ PanelWindow {
                             readonly property int usedColumns: itemCount <= 3 ? itemCount : (itemCount === 4 ? 2 : 3)
                             readonly property int rows: itemCount <= 3 ? 1 : 2
                             property int cardWidth: Math.max(230, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns))
-                            property int cardHeight: Math.max(88, Math.floor((workspacePanel.height - ((rows - 1) * spacing)) / rows))
-                            spacing: 12
+                            property int cardHeight: Math.max(72, Math.floor((workspacePanel.height - ((rows - 1) * spacing)) / rows))
+                            spacing: 10
                             columns: usedColumns
                             width: Math.min(workspacePanel.width, (usedColumns * cardWidth) + ((usedColumns - 1) * spacing))
                             height: Math.min(workspacePanel.height, (rows * cardHeight) + ((rows - 1) * spacing))
@@ -555,7 +555,7 @@ PanelWindow {
 
                                         Rectangle {
                                             width: parent.width
-                                            height: Math.max(74, parent.height - 34)
+                                            height: Math.max(58, parent.height - 30)
                                             radius: 10
                                             color: "#33000000"
                                             border.width: 1
@@ -574,8 +574,8 @@ PanelWindow {
                                                         readonly property var tile: modelData || ({})
                                                         x: Math.max(0, Math.round(tile.x * (parent.width - 4)))
                                                         y: Math.max(0, Math.round(tile.y * (parent.height - 4)))
-                                                        width: Math.max(52, Math.round(tile.w * parent.width) - 4)
-                                                        height: Math.max(34, Math.round(tile.h * parent.height) - 4)
+                                                        width: Math.max(42, Math.round(tile.w * parent.width) - 5)
+                                                        height: Math.max(26, Math.round(tile.h * parent.height) - 5)
                                                         radius: 10
                                                         color: "#6E5E7A9A"
                                                         border.width: 1
@@ -585,7 +585,7 @@ PanelWindow {
                                                             anchors.centerIn: parent
                                                             text: String(tile.appName || "?").slice(0, 10)
                                                             color: "white"
-                                                            font.pixelSize: 11
+                                                            font.pixelSize: 10
                                                             font.bold: true
                                                             elide: Text.ElideRight
                                                         }

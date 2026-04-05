@@ -13,8 +13,8 @@ PanelWindow {
     id: root
 
     // --- SETTINGS ---
-    property string layoutAlgorithm: ""
-    property string lastLayoutAlgorithm: ""
+    property string layoutAlgorithm: "smartgrid"
+    property string lastLayoutAlgorithm: "smartgrid"
     property bool liveCapture: false
     property bool moveCursorToActiveWindow: false
 
@@ -41,12 +41,12 @@ PanelWindow {
     IpcHandler {
         target: "expose"
         function toggle(layout: string) {
-            root.layoutAlgorithm = layout
+            root.layoutAlgorithm = "smartgrid"
             root.toggleExpose()
         }
 
         function open(layout: string) {
-            root.layoutAlgorithm = layout
+            root.layoutAlgorithm = "smartgrid"
             if (root.isActive) return
             root.toggleExpose()
         }
@@ -101,24 +101,7 @@ PanelWindow {
     function toggleExpose() {
         root.isActive = !root.isActive
         if (root.isActive) {
-            if (root.layoutAlgorithm === 'random') {
-                var layouts = [
-                    'smartgrid',
-                    'justified',
-                    'bands',
-                    'masonry',
-                    'hero',
-                    'spiral',
-                    'satellite',
-                    'staggered',
-                    'columnar',
-                    'vortex',
-                  ].filter((l) => l !== root.lastLayoutAlgorithm)
-                var randomLayout = layouts[Math.floor(Math.random() * layouts.length)]
-                root.lastLayoutAlgorithm = randomLayout
-            } else {
-                root.lastLayoutAlgorithm = root.layoutAlgorithm
-            }
+            root.lastLayoutAlgorithm = "smartgrid"
 
             exposeArea.currentIndex = -1
             searchBox.reset()
@@ -259,13 +242,16 @@ PanelWindow {
         Item {
             id: layoutContainer
             anchors.fill: parent
-            anchors.margins: 32
+            anchors.margins: 18
 
                 Column {
                     id: layoutRoot
                     anchors.fill: parent
-                    anchors.margins: 48
-                    spacing: 20
+                    anchors.leftMargin: 28
+                    anchors.rightMargin: 28
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 16
+                    spacing: 16
 
                 SearchBox {
                     id: searchBox
@@ -386,7 +372,7 @@ PanelWindow {
                 Rectangle {
                     id: workspaceStrip
                     implicitWidth: Math.min(layoutRoot.width, 1360)
-                    implicitHeight: 200
+                    implicitHeight: 170
                     radius: 18
                     anchors.horizontalCenter: layoutRoot.horizontalCenter
                     color: "#73101420"

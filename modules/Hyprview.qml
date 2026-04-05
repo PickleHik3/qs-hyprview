@@ -250,7 +250,7 @@ PanelWindow {
                     anchors.leftMargin: 28
                     anchors.rightMargin: 28
                     anchors.topMargin: 0
-                    anchors.bottomMargin: 12
+                    anchors.bottomMargin: 26
                     spacing: 12
 
                 SearchBox {
@@ -371,8 +371,13 @@ PanelWindow {
 
                 Rectangle {
                     id: workspaceStrip
+                    property int workspaceRows: workspaceRepeater.count <= 3 ? 1 : 2
+                    property int gridSpacing: 10
+                    property int cardHeightSingleRow: 108
+                    property int cardHeightDoubleRow: 92
+                    readonly property int cardHeightDynamic: workspaceRows === 1 ? cardHeightSingleRow : cardHeightDoubleRow
                     implicitWidth: Math.min(layoutRoot.width, 1360)
-                    implicitHeight: 152
+                    implicitHeight: (workspaceRows * cardHeightDynamic) + ((workspaceRows - 1) * gridSpacing) + 28
                     radius: 18
                     anchors.horizontalCenter: layoutRoot.horizontalCenter
                     color: "#73101420"
@@ -504,8 +509,8 @@ PanelWindow {
                             readonly property int usedColumns: itemCount <= 3 ? itemCount : (itemCount === 4 ? 2 : 3)
                             readonly property int rows: itemCount <= 3 ? 1 : 2
                             property int cardWidth: Math.max(230, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns))
-                            property int cardHeight: Math.max(72, Math.floor((workspacePanel.height - ((rows - 1) * spacing)) / rows))
-                            spacing: 10
+                            property int cardHeight: workspaceStrip.cardHeightDynamic
+                            spacing: workspaceStrip.gridSpacing
                             columns: usedColumns
                             width: Math.min(workspacePanel.width, (usedColumns * cardWidth) + ((usedColumns - 1) * spacing))
                             height: Math.min(workspacePanel.height, (rows * cardHeight) + ((rows - 1) * spacing))

@@ -250,8 +250,9 @@ PanelWindow {
                     anchors.leftMargin: 28
                     anchors.rightMargin: 28
                     anchors.topMargin: 0
-                    anchors.bottomMargin: 26
+                    anchors.bottomMargin: 12
                     spacing: 12
+                    property int workspaceBottomPadding: 18
 
                 SearchBox {
                     id: searchBox
@@ -266,7 +267,7 @@ PanelWindow {
                 Item {
                     id: exposeArea
                     width: layoutRoot.width
-                    height: layoutRoot.height - searchBox.implicitHeight - workspaceStrip.implicitHeight - (layoutRoot.spacing * 2)
+                    height: layoutRoot.height - searchBox.implicitHeight - workspaceStrip.implicitHeight - workspacePad.implicitHeight - (layoutRoot.spacing * 2)
 
                     property int currentIndex: 0
                     property string searchText: ""
@@ -633,6 +634,12 @@ PanelWindow {
                             }
                         }
                     }
+                }
+
+                Item {
+                    id: workspacePad
+                    implicitWidth: layoutRoot.width
+                    implicitHeight: layoutRoot.workspaceBottomPadding
                 }
             }
         }

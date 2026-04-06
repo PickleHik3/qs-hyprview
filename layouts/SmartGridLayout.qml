@@ -9,17 +9,19 @@ Singleton {
         if (N === 0) return []
         if (outerWidth <= 0 || outerHeight <= 0) return []
 
-        var gap = Math.min(outerWidth * 0.03, outerHeight * 0.03)
+        var isPortrait = outerHeight > outerWidth
+        var gap = Math.min(outerWidth * (isPortrait ? 0.022 : 0.03), outerHeight * (isPortrait ? 0.022 : 0.03))
 
         // --- 0. DEFINIZIONE AREA SICURA (SCALATA) ---
         // Riduciamo l'area di calcolo al 90% per lasciare spazio alle animazioni hover
-        var contentScale = 0.9
+        var contentScale = isPortrait ? 0.94 : 0.9
         var usableW = outerWidth * contentScale
         var usableH = outerHeight * contentScale
 
         // --- 1. TROVARE LA SCALA OTTIMALE ---
         // Usiamo usableW/H per decidere la dimensione delle finestre
-        var TARGET_ASPECT = 16.0 / 9.0
+        // Portrait screens prefer taller cells to avoid tiny thumbnails.
+        var TARGET_ASPECT = isPortrait ? (10.0 / 16.0) : (16.0 / 9.0)
         var bestCols = 1
         var bestRows = 1
         var bestScale = 0

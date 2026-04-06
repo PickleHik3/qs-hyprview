@@ -12,6 +12,7 @@ Item {
 
     property var hWin: null
     property var wHandle:null
+    property var effectiveHandle: null
 
     property string winKey: ''
 
@@ -39,7 +40,7 @@ Item {
     z: targetZ
     rotation: 0
 
-    visible: !!wHandle
+    visible: !!effectiveHandle
 
     NumberAnimation {
         id: animX
@@ -131,12 +132,18 @@ Item {
     onYChanged: updateLastPos()
 
     Component.onCompleted: {
+        if (wHandle) effectiveHandle = wHandle
         rotation = targetRotation
         if (!root.animateWindows) {
             x = targetX
             y = targetY
             updateLastPos()
         }
+    }
+
+    onWHandleChanged: {
+        // Keep last known valid handle to avoid capture source flapping.
+        if (wHandle) effectiveHandle = wHandle
     }
 
     function activateWindow() {
@@ -195,6 +202,8 @@ Item {
 
             property real startX: 0
             property real startY: 0
+            property real startItemX: 0
+            property real startItemY: 0
             property bool swipeTriggered: false
             property bool dragMoved: false
 
@@ -204,6 +213,8 @@ Item {
             onPressed: event => {
                 startX = event.x
                 startY = event.y
+                startItemX = thumbContainer.x
+                startItemY = thumbContainer.y
                 swipeTriggered = false
                 dragMoved = false
                 thumbContainer.dropHandled = false
@@ -214,13 +225,15 @@ Item {
                 thumbContainer.Drag.hotSpot.y = event.y
             }
             onPositionChanged: event => {
-                var dx = event.x - startX
-                var dy = event.y - startY
+                // During drag, local pointer coordinates can stay near the hotspot.
+                // Use item movement deltas to detect intentional swipe-up gestures.
+                var dx = thumbContainer.x - startItemX
+                var dy = thumbContainer.y - startItemY
                 if (Math.abs(dx) + Math.abs(dy) > 24) dragMoved = true
                 if (Math.abs(thumbContainer.x - thumbContainer.targetX) + Math.abs(thumbContainer.y - thumbContainer.targetY) > 20) {
                     dragMoved = true
                 }
-                if (!swipeTriggered && dy < -90 && Math.abs(dx) < 140) {
+                if (!swipeTriggered && dy < -80 && Math.abs(dx) < 180 && Math.abs(dy) > (Math.abs(dx) * 0.8)) {
                     swipeTriggered = true
                     thumbContainer.closeWindow()
                 }
@@ -274,32 +287,29 @@ Item {
         RectangularShadow {
             anchors.fill: parent
             radius: 16
-            blur: 24
-            spread: 10
+            blur: (exposeRoot && exposeRoot.efficientMode && exposeRoot.thumbCount > 8) ? 14 : 24
+            spread: (exposeRoot && exposeRoot.efficientMode && exposeRoot.thumbCount > 8) ? 5 : 10
             color: "#55000000"
             cached: true
+            visible: false
         }
 
         Loader {
             id: thumbLoader
             anchors.fill: parent
-            active: root.isActive && !!thumbContainer.wHandle
+            active: root.isActive && !!thumbContainer.effectiveHandle
             sourceComponent: ScreencopyView {
                 id: thumb
                 anchors.fill: parent
-                captureSource: thumbContainer.wHandle
-                live: root.liveCapture && root.isActive
+                captureSource: thumbContainer.effectiveHandle
+                live: (root.liveCapture
+                    || ((exposeRoot && exposeRoot.dynamicLiveCapture)
+                        && (thumbContainer.hovered || exposeArea.currentIndex === index)))
+                    && root.isActive
                 paintCursor: false
-                visible: root.isActive && thumbContainer.wHandle && hasContent
+                visible: root.isActive && !!thumbContainer.effectiveHandle
 
-                layer.enabled: true
-                layer.effect: OpacityMask {
-                    maskSource: Rectangle {
-                        width: thumb.width
-                        height: thumb.height
-                        radius: 16
-                    }
-                }
+                layer.enabled: false
 
                 Rectangle {
                     anchors.fill: parent

@@ -26,6 +26,11 @@ PanelWindow {
     property int activeWorkspaceId: 1
     property int draggingTargetWorkspace: -1
     property int draggingFromWorkspace: -1
+    property bool efficientMode: true
+    property int refreshCursor: 0
+    readonly property int thumbCount: winRepeater.count
+    property int edgePadding: 40
+    readonly property bool dynamicLiveCapture: efficientMode && isActive && thumbCount <= 8
 
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
@@ -88,12 +93,21 @@ PanelWindow {
         }
     }
 
-    // Update thumbs every 125ms if liveCapture = false
+    // Adaptive refresh: smoother on few windows, conservative on many.
     Timer {
         id: screencopyTimer
-        interval: 125
+        interval: {
+            if (!root.efficientMode) return 33
+            var c = Math.max(1, root.thumbCount)
+            if (c <= 3) return 34
+            if (c <= 6) return 45
+            if (c <= 10) return 60
+            return 80
+        }
         repeat: true
-        running: !root.liveCapture && root.isActive
+        // Keep non-live thumbnails static after initial capture; periodic recapture
+        // was causing visible flicker on some compositors.
+        running: false
         onTriggered: root.refreshThumbs()
     }
 
@@ -102,25 +116,52 @@ PanelWindow {
         root.isActive = !root.isActive
         if (root.isActive) {
             root.lastLayoutAlgorithm = "smartgrid"
+            root.refreshCursor = 0
 
             exposeArea.currentIndex = -1
             searchBox.reset()
             Hyprland.refreshToplevels()
-            refreshThumbs()
+            refreshThumbs(true)
         } else {
             root.animateWindows = false
             root.lastPositions = {}
+            root.refreshCursor = 0
         }
     }
 
-    function refreshThumbs() {
+    function refreshThumbs(forceAll) {
         if (!root.isActive) return
-        for (var i = 0; i < winRepeater.count; ++i) {
+        var total = winRepeater.count
+        if (total <= 0) return
+
+        function refreshAt(i) {
             var it = winRepeater.itemAt(i)
-            if (it && it.visible && it.refreshThumb) {
-                it.refreshThumb()
-            }
+            if (it && it.visible && it.refreshThumb) it.refreshThumb()
         }
+
+        if (forceAll === true || !root.efficientMode || total <= 6) {
+            for (var i = 0; i < total; ++i) refreshAt(i)
+            return
+        }
+
+        var focused = exposeArea.currentIndex
+        var batch = Math.min(4, total)
+        if (focused >= 0 && focused < total) {
+            refreshAt(focused)
+            batch = Math.max(1, batch - 1)
+        }
+
+        var done = 0
+        var scan = 0
+        while (done < batch && scan < total) {
+            var idx = (root.refreshCursor + scan) % total
+            scan += 1
+            if (idx === focused) continue
+            refreshAt(idx)
+            done += 1
+        }
+
+        root.refreshCursor = (root.refreshCursor + batch) % total
     }
 
     function moveWindowToWorkspace(address, workspaceId) {
@@ -242,21 +283,19 @@ PanelWindow {
         Item {
             id: layoutContainer
             anchors.fill: parent
-            anchors.margins: 12
+            anchors.margins: root.edgePadding
 
-                Column {
+                Item {
                     id: layoutRoot
                     anchors.fill: parent
-                    anchors.leftMargin: 28
-                    anchors.rightMargin: 28
-                    anchors.topMargin: 0
-                    anchors.bottomMargin: 12
-                    spacing: 12
-                    property int workspaceBottomPadding: 18
+                    anchors.margins: 0
+                    property int sectionSpacing: 12
 
                 SearchBox {
                     id: searchBox
                     width: Math.min(layoutRoot.width * 0.68, 760)
+                    anchors.top: layoutRoot.top
+                    anchors.horizontalCenter: layoutRoot.horizontalCenter
                     onTextChanged: function(text) {
                         root.animateWindows = true
                         exposeArea.searchText = text
@@ -266,8 +305,12 @@ PanelWindow {
                 // thumbs area
                 Item {
                     id: exposeArea
-                    width: layoutRoot.width
-                    height: layoutRoot.height - searchBox.implicitHeight - workspaceStrip.implicitHeight - workspacePad.implicitHeight - (layoutRoot.spacing * 2)
+                    anchors.left: layoutRoot.left
+                    anchors.right: layoutRoot.right
+                    anchors.top: searchBox.bottom
+                    anchors.topMargin: layoutRoot.sectionSpacing
+                    anchors.bottom: workspaceStrip.top
+                    anchors.bottomMargin: layoutRoot.sectionSpacing
 
                     property int currentIndex: 0
                     property string searchText: ""
@@ -309,12 +352,12 @@ PanelWindow {
                                 if (at[1] + size[1] <= 0) continue
 
                                 // Text filtering
-                                var title = (w.title || clientInfo.title || "").toLowerCase()
                                 var clazz = (clientInfo["class"] || "").toLowerCase()
                                 var ic = (clientInfo.initialClass || "").toLowerCase()
                                 var app = (w.appId || clientInfo.initialClass || "").toLowerCase()
 
                                 if (q.length > 0) {
+                                    var title = (w.title || clientInfo.title || "").toLowerCase()
                                     var match = title.indexOf(q) !== -1 || clazz.indexOf(q) !== -1 ||
                                                 ic.indexOf(q) !== -1 || app.indexOf(q) !== -1
                                     if (!match) continue
@@ -372,15 +415,19 @@ PanelWindow {
 
                 Rectangle {
                     id: workspaceStrip
+                    readonly property bool isPortrait: root.height > root.width
                     property int workspaceRows: workspaceRepeater.count <= 3 ? 1 : 2
                     property int gridSpacing: 10
                     property int cardHeightSingleRow: 108
                     property int cardHeightDoubleRow: 92
                     readonly property int cardHeightDynamic: workspaceRows === 1 ? cardHeightSingleRow : cardHeightDoubleRow
-                    implicitWidth: Math.min(layoutRoot.width, 1360)
+                    width: layoutRoot.width
+                    implicitWidth: layoutRoot.width
                     implicitHeight: (workspaceRows * cardHeightDynamic) + ((workspaceRows - 1) * gridSpacing) + 28
                     radius: 18
-                    anchors.horizontalCenter: layoutRoot.horizontalCenter
+                    anchors.left: layoutRoot.left
+                    anchors.right: layoutRoot.right
+                    anchors.bottom: layoutRoot.bottom
                     color: "#73101420"
                     border.width: 1
                     border.color: "#335b6780"
@@ -392,7 +439,7 @@ PanelWindow {
                         values: {
                             if (!rawToplevels) return []
 
-                            function friendlyAppName(rawClass, rawTitle) {
+                            function friendlyAppName(rawClass) {
                                 var cls = String(rawClass || "").trim()
                                 if (cls.length > 0) {
                                     cls = cls.split(".").pop()
@@ -401,10 +448,6 @@ PanelWindow {
                                     if (cls.length > 0) {
                                         return cls.charAt(0).toUpperCase() + cls.slice(1)
                                     }
-                                }
-                                var title = String(rawTitle || "").trim()
-                                if (title.length > 0) {
-                                    return title.split(" - ")[0].slice(0, 18)
                                 }
                                 return "App"
                             }
@@ -431,9 +474,8 @@ PanelWindow {
 
                                 workspaceWindows[workspaceId].push({
                                     address: w.address,
-                                    title: String(w.title || clientInfo.title || ""),
                                     clazz: String(clientInfo["class"] || clientInfo.initialClass || w.appId || ""),
-                                    appName: friendlyAppName(clientInfo["class"] || clientInfo.initialClass || w.appId || "", w.title || clientInfo.title || ""),
+                                    appName: friendlyAppName(clientInfo["class"] || clientInfo.initialClass || w.appId || ""),
                                     atX: atX,
                                     atY: atY,
                                     sizeW: sizeW,
@@ -474,16 +516,40 @@ PanelWindow {
                                     var spanX = Math.max(1, maxX - minX)
                                     var spanY = Math.max(1, maxY - minY)
 
+                                    var groups = []
                                     for (var j = 0; j < Math.min(wins.length, 8); ++j) {
                                         var iw = wins[j]
-                                        layoutTiles.push({
-                                            appName: iw.appName,
-                                            x: Math.max(0, Math.min(1, (iw.atX - minX) / spanX)),
-                                            y: Math.max(0, Math.min(1, (iw.atY - minY) / spanY)),
-                                            w: Math.max(0.1, Math.min(1, iw.sizeW / spanX)),
-                                            h: Math.max(0.1, Math.min(1, iw.sizeH / spanY))
-                                        })
+                                        var nx = Math.max(0, Math.min(1, (iw.atX - minX) / spanX))
+                                        var ny = Math.max(0, Math.min(1, (iw.atY - minY) / spanY))
+                                        var nw = Math.max(0.1, Math.min(1, iw.sizeW / spanX))
+                                        var nh = Math.max(0.1, Math.min(1, iw.sizeH / spanY))
+
+                                        var merged = false
+                                        for (var g = 0; g < groups.length; ++g) {
+                                            var cg = groups[g]
+                                            if (Math.abs(cg.x - nx) < 0.06 &&
+                                                Math.abs(cg.y - ny) < 0.06 &&
+                                                Math.abs(cg.w - nw) < 0.08 &&
+                                                Math.abs(cg.h - nh) < 0.08) {
+                                                cg.stackCount += 1
+                                                merged = true
+                                                break
+                                            }
+                                        }
+
+                                        if (!merged) {
+                                            groups.push({
+                                                appName: iw.appName,
+                                                x: nx,
+                                                y: ny,
+                                                w: nw,
+                                                h: nh,
+                                                stackCount: 1
+                                            })
+                                        }
                                     }
+
+                                    layoutTiles = groups
                                 }
 
                                 result.push({
@@ -507,9 +573,11 @@ PanelWindow {
                         Grid {
                             id: workspaceGrid
                             readonly property int itemCount: Math.max(1, Math.min(workspaceRepeater.count, 6))
-                            readonly property int usedColumns: itemCount <= 3 ? itemCount : (itemCount === 4 ? 2 : 3)
+                            readonly property int usedColumns: workspaceStrip.isPortrait
+                                ? (itemCount <= 2 ? itemCount : 2)
+                                : (itemCount <= 3 ? itemCount : (itemCount === 4 ? 2 : 3))
                             readonly property int rows: itemCount <= 3 ? 1 : 2
-                            property int cardWidth: Math.max(230, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns))
+                            property int cardWidth: Math.max(workspaceStrip.isPortrait ? 168 : 230, Math.floor((workspacePanel.width - ((usedColumns - 1) * spacing)) / usedColumns))
                             property int cardHeight: workspaceStrip.cardHeightDynamic
                             spacing: workspaceStrip.gridSpacing
                             columns: usedColumns
@@ -589,11 +657,34 @@ PanelWindow {
 
                                                         Text {
                                                             anchors.centerIn: parent
-                                                            text: String(tile.appName || "?").slice(0, 10)
+                                                            text: (Number(tile.stackCount || 1) > 1)
+                                                                ? (String(tile.stackCount) + " stacked")
+                                                                : String(tile.appName || "?").slice(0, 10)
                                                             color: "white"
                                                             font.pixelSize: 10
                                                             font.bold: true
                                                             elide: Text.ElideRight
+                                                        }
+
+                                                        Rectangle {
+                                                            visible: Number(tile.stackCount || 1) > 1
+                                                            anchors.right: parent.right
+                                                            anchors.top: parent.top
+                                                            anchors.margins: 4
+                                                            width: 20
+                                                            height: 16
+                                                            radius: 8
+                                                            color: "#AA0E1A2D"
+                                                            border.width: 1
+                                                            border.color: "#88B6D7FF"
+
+                                                            Text {
+                                                                anchors.centerIn: parent
+                                                                text: String(tile.stackCount)
+                                                                color: "white"
+                                                                font.pixelSize: 9
+                                                                font.bold: true
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -636,11 +727,6 @@ PanelWindow {
                     }
                 }
 
-                Item {
-                    id: workspacePad
-                    implicitWidth: layoutRoot.width
-                    implicitHeight: layoutRoot.workspaceBottomPadding
-                }
             }
         }
     }

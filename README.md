@@ -2,7 +2,7 @@
 
 This repo is my tablet-focused fork of `qs-hyprview`.
 
-I use it as the overview window for my Hyprland setup. It is started by a user service and opened from a Hyprgrass touch gesture.
+It runs as a Quickshell overview for Hyprland and can be opened through `quickshell ipc`.
 
 ## What is different in this fork
 
@@ -15,29 +15,80 @@ If you want the original project, use upstream:
 
 - https://github.com/dom0/qs-hyprview
 
-## How it is started
+## Installation
 
-This repo is launched by the user service:
+### 1. Clone the repo
 
-- `~/.config/systemd/user/qs-hyprview.service`
-
-The same repo path must also be used in your Hyprland config, because the touch gesture calls Quickshell directly:
+Clone the repo anywhere you want to keep it:
 
 ```bash
-quickshell ipc -p <path-to-this-repo> call expose open smartgrid
+git clone https://github.com/PickleHik3/qs-hyprview ~/qs-hyprview
 ```
 
-## Setup
+You can use a different path, but use that same absolute path everywhere below.
 
-1. Clone this repo anywhere.
-2. Put the correct absolute path in `~/.config/systemd/user/qs-hyprview.service`.
-3. Put the same path in your Hyprland config anywhere you call `quickshell ipc -p ...`.
-4. Reload the user service and Hyprland:
+### 2. Create the user service
+
+Create `~/.config/systemd/user/qs-hyprview.service`:
+
+```ini
+[Unit]
+Description=Quickshell Hyprview
+PartOf=hyprland-session.target
+After=hyprland-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/quickshell -p /home/your-user/qs-hyprview
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=hyprland-session.target
+```
+
+Replace `/home/your-user/qs-hyprview` with the real path to your clone.
+
+### 3. Enable the service
 
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now qs-hyprview.service
+```
+
+### 4. Add the IPC command to Hyprland
+
+Use the same repo path in your Hyprland config anywhere you want to open the overview:
+
+```bash
+quickshell ipc -p /home/your-user/qs-hyprview call expose open smartgrid
+```
+
+Example Hyprgrass binding:
+
+```ini
+hyprgrass-bind = , edge:d:u, exec, quickshell ipc -p /home/your-user/qs-hyprview call expose open smartgrid
+```
+
+### 5. Reload Hyprland
+
+```bash
 hyprctl reload
+```
+
+### 6. Verify
+
+Check that Quickshell is running:
+
+```bash
+systemctl --user status qs-hyprview.service --no-pager
+```
+
+Test the overview manually:
+
+```bash
+quickshell ipc -p /home/your-user/qs-hyprview call expose open smartgrid
+quickshell ipc -p /home/your-user/qs-hyprview call expose close
 ```
 
 ## IPC commands
@@ -57,5 +108,4 @@ quickshell ipc -p <path-to-this-repo> call expose close
 
 ## Notes
 
-- This repo is meant to stay in sync with the `hyprland-surface` repo, especially for paths and startup behavior.
 - The default `shell.qml` in this fork starts `Hyprview` with `liveCapture: false` and `moveCursorToActiveWindow: false`.

@@ -1,0 +1,13 @@
+[Unit]
+Description=Quickshell Hyprview (Tablet Fork)
+PartOf=hyprland-session.target
+After=hyprland-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/quickshell -p %h/.config/hypr/apps/qs-hyprview
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=hyprland-session.target

@@ -19,35 +19,26 @@ If you want the original project, use upstream:
 
 ### 1. Clone the repo
 
-Clone the repo anywhere you want to keep it:
+Clone the repo into the default app path:
 
 ```bash
-git clone https://github.com/PickleHik3/qs-hyprview ~/qs-hyprview
+mkdir -p ~/.config/hypr/apps
+cd ~/.config/hypr/apps
+git clone https://github.com/PickleHik3/qs-hyprview
 ```
 
-You can use a different path, but use that same absolute path everywhere below.
+### 2. Install the user service
 
-### 2. Create the user service
+This repo ships the service file at:
 
-Create `~/.config/systemd/user/qs-hyprview.service`:
+- `systemd-user/qs-hyprview.service`
 
-```ini
-[Unit]
-Description=Quickshell Hyprview
-PartOf=hyprland-session.target
-After=hyprland-session.target
+Install it with:
 
-[Service]
-Type=simple
-ExecStart=/usr/bin/quickshell -p /home/your-user/qs-hyprview
-Restart=on-failure
-RestartSec=1
-
-[Install]
-WantedBy=hyprland-session.target
+```bash
+mkdir -p ~/.config/systemd/user
+cp systemd-user/qs-hyprview.service ~/.config/systemd/user/qs-hyprview.service
 ```
-
-Replace `/home/your-user/qs-hyprview` with the real path to your clone.
 
 ### 3. Enable the service
 
@@ -61,13 +52,13 @@ systemctl --user enable --now qs-hyprview.service
 Use the same repo path in your Hyprland config anywhere you want to open the overview:
 
 ```bash
-quickshell ipc -p /home/your-user/qs-hyprview call expose open smartgrid
+quickshell ipc -p $HOME/.config/hypr/apps/qs-hyprview call expose open smartgrid
 ```
 
 Example Hyprgrass binding:
 
 ```ini
-hyprgrass-bind = , edge:d:u, exec, quickshell ipc -p /home/your-user/qs-hyprview call expose open smartgrid
+hyprgrass-bind = , edge:d:u, exec, quickshell ipc -p $HOME/.config/hypr/apps/qs-hyprview call expose open smartgrid
 ```
 
 ### 5. Reload Hyprland
@@ -87,8 +78,8 @@ systemctl --user status qs-hyprview.service --no-pager
 Test the overview manually:
 
 ```bash
-quickshell ipc -p /home/your-user/qs-hyprview call expose open smartgrid
-quickshell ipc -p /home/your-user/qs-hyprview call expose close
+quickshell ipc -p $HOME/.config/hypr/apps/qs-hyprview call expose open smartgrid
+quickshell ipc -p $HOME/.config/hypr/apps/qs-hyprview call expose close
 ```
 
 ## IPC commands
